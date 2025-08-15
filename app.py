@@ -561,4 +561,5 @@ def oanda_chart():
     return render_template("graph.html", latest_html=graph_html)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=True)
