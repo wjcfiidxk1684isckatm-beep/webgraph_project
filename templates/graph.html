@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>グラフ表示</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+  /* 統計表示ボックス */
+  .stats-box {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+  }
+  .stats-box h3 {
+    margin-bottom: 1rem;
+    font-weight: bold;
+  }
+
+  /* グラフ表示ボックス */
+  .graph-box {
+    background-color: #ffffff;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.05);
+  }
+  .graph-box h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+  }
+
+  /* 表のスタイル（Bootstrapが有効な場合） */
+  table.table {
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  /* 既存スタイル */
+  body {
+    font-family: "Segoe UI", sans-serif;
+    background-color: #f4f4f4;
+    margin: 40px;
+  }
+  h1 {
+    color: #333;
+  }
+  .section {
+    margin-bottom: 40px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  }
+  .section h2 {
+    margin-bottom: 10px;
+    color: #0077cc;
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .data-table th, .data-table td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    text-align: center;
+  }
+  .back-link {
+    display: inline-block;
+    margin-top: 20px;
+    text-decoration: none;
+    color: #0077cc;
+  }
+  .save-button {
+    margin-top: 10px;
+  }
+</style>
+
+</head>
+<body>
+    <h1>📊 グラフ表示</h1>
+
+    <div class="graph-box">
+        <h2>📈 メインチャート</h2>
+        <form action="/graph" method="get" style="margin-bottom: 10px;">
+            <label for="chart">グラフ種類：</label>
+            <select name="chart" id="chart">
+                <option value="line">折れ線</option>
+                <option value="bar">棒グラフ</option>
+                <option value="scatter">散布図</option>
+            </select>
+            <input type="hidden" name="file" value="{{ request.args.get('file') }}">
+            {% for symbol in request.args.getlist('symbol') %}
+                <input type="hidden" name="symbol" value="{{ symbol }}">
+            {% endfor %}
+            <input type="hidden" name="start" value="{{ request.args.get('start') }}">
+            <input type="hidden" name="end" value="{{ request.args.get('end') }}">
+            <input type="hidden" name="price_min" value="{{ request.args.get('price_min') }}">
+            <input type="hidden" name="price_max" value="{{ request.args.get('price_max') }}">
+            <input type="hidden" name="action" value="{{ request.args.get('action') }}">
+            <button type="submit">表示切替</button>
+        </form>
+        {{ latest_html|safe }}
+        <form action="/save_png" method="get" class="save-button">
+            <input type="hidden" name="chart" value="{{ request.args.get('chart', 'line') }}">
+            <button type="submit">📥 グラフをPNGで保存</button>
+        </form>
+    </div>
+
+    <div class="graph-box">
+        <h2>🧭 円グラフ</h2>
+        {{ pie_html|safe }}
+        <form action="/save_png" method="get" class="save-button">
+            <input type="hidden" name="kind" value="pie">
+            <button type="submit">📥 円グラフをPNG保存</button>
+        </form>
+    </div>
+
+    <div class="graph-box"><h2>📋 データテーブル</h2>{{ df_table|safe }}</div>
+    <div class="graph-box"><h2>📅 日次サマリー</h2>{{ daily_html|safe }}</div>
+    <div class="graph-box"><h2>📊 銘柄統計</h2>{{ stats_html|safe }}</div>
+    <div class="graph-box"><h2>📈 トレンド比較</h2>{{ trend_html|safe }}</div>
+    <div class="graph-box"><h2>🗓️ 月次サマリー</h2>{{ monthly_html|safe }}</div>
+    <div class="graph-box"><h2>📉 ボラティリティランキング</h2>{{ volatility_html|safe }}</div>
+
+    <div class="graph-box">
+    <h2>🔍 条件フィルター</h2>
+    <form action="/graph" method="get" id="filterForm">
+        <!-- フィルター項目 -->
+        <label for="start">開始日:</label>
+        <input type="date" id="start" name="start" value="{{ request.args.get('start', '') }}">
+        <label for="end">終了日:</label>
+        <input type="date" id="end" name="end" value="{{ request.args.get('end', '') }}">
+        <label for="price_min">最小価格:</label>
+        <input type="number" id="price_min" name="price_min" value="{{ request.args.get('price_min', '') }}">
+        <label for="price_max">最大価格:</label>
+        <input type="number" id="price_max" name="price_max" value="{{ request.args.get('price_max', '') }}">
+        <label for="action">アクション:</label>
+        <select id="action" name="action">
+            <option value="">選択なし</option>
+            <option value="buy" {% if request.args.get('action') == 'buy' %}selected{% endif %}>買い</option>
+            <option value="sell" {% if request.args.get('action') == 'sell' %}selected{% endif %}>売り</option>
+        </select>
+        {% for symbol in request.args.getlist('symbol') %}
+            <input type="hidden" name="symbol" value="{{ symbol }}">
+        {% endfor %}
+        <input type="hidden" name="file" value="{{ request.args.get('file', '') }}">
+        <input type="hidden" name="chart" value="{{ request.args.get('chart', 'line') }}">
+        <button type="submit">🔍 フィルター適用</button>
+    </form>
+
+    <!-- 名前付き保存フォーム -->
+    <div class="named-save">
+        <label for="filterName">保存名：</label>
+        <input type="text" id="filterName" placeholder="例: ETH分析" list="filterList">
+        <button onclick="saveFilterAs()">💾 名前付き保存</button>
+        <button onclick="loadFilterByName()">📂 名前付き読込</button>
+    </div>
+
+    <!-- 一覧表示用 datalist（次ステップで使う） -->
+    <datalist id="filterList"></datalist>
+
+    <div class="filter-actions">
+        <button onclick="saveFilter()">💾 通常保存</button>
+        <button onclick="loadFilter()">📂 通常読込</button>
+    </div>
+</div>
+    <div class="stats-box mt-4">
+  <h3>📊 シグナル統計</h3>
+  <table class="table table-bordered table-sm table-striped">
+    <thead><tr><th>項目</th><th>値</th></tr></thead>
+    <tbody>
+      {% for key, value in signal_stats.items() %}
+        <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+      {% endfor %}
+    </tbody>
+    </table>
+    </div>
+
+    <div class="graph-box">
+        <h2>📊 移動平均チャート</h2>
+        {{ ma_html|safe }}
+        <form action="/save_png" method="get" class="save-button">
+            <input type="hidden" name="kind" value="ma">
+            <button type="submit">📥 移動平均チャートをPNG保存</button>
+        </form>
+    </div>
+
+    <div class="graph-box">
+        <h2>📈 RSI・MACDチャート</h2>
+        {{ rsi_macd_html|safe }}
+        <!-- ✅ 売買シグナルCSVダウンロードリンク -->
+<h4>📥 売買シグナルCSVダウンロード</h4>
+<a href="{{ url_for('static', filename='buy_signals.csv') }}" download>📥 買いシグナルCSV</a><br>
+<a href="{{ url_for('static', filename='sell_signals.csv') }}" download>📥 売りシグナルCSV</a>
+<h4>👀 買いシグナルプレビュー</h4>
+{{ buy_table_html|safe }}
+
+<h4>👀 売りシグナルプレビュー</h4>
+{{ sell_table_html|safe }}
+        <form action="/save_signals" method="get" class="save-button">
+            <button type="submit">📥 RSI・MACDシグナルをCSV保存</button>
+        </form>
+    </div>
+
+    <h3>📊 売買シグナル統計</h3>
+<table class="table table-bordered">
+  <tr><th>項目</th><th>値</th></tr>
+  {% for key, value in signal_stats.items() %}
+    <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+  {% endfor %}
+</table>
+
+    <a href="/" class="back-link">← 戻る</a>
+
+    <script>
+    function saveFilter() {
+        const form = document.getElementById('filterForm');
+        const filter = {
+            start: form.start.value,
+            end: form.end.value,
+            price_min: form.price_min.value,
+            price_max: form.price_max.value,
+            action: form.action.value,
+            symbol: Array.from(form.querySelectorAll('input[name="symbol"]')).map(e => e.value),
+            file: form.file.value,
+            chart: form.chart.value
+        };
+        localStorage.setItem('savedFilter', JSON.stringify(filter));
+        alert("フィルターを保存しました！");
+    }
+
+    function loadFilter() {
+        const filter = JSON.parse(localStorage.getItem('savedFilter'));
+        if (!filter) {
+            alert("保存されたフィルターが見つかりません。");
+            return;
+        }
+
+        const form = document.getElementById('filterForm');
+        form.start.value = filter.start || '';
+        form.end.value = filter.end || '';
+        form.price_min.value = filter.price_min || '';
+        form.price_max.value = filter.price_max || '';
+        form.action.value = filter.action || '';
+
+        form.querySelectorAll('input[name="symbol"]').forEach(e => e.remove());
+        if (Array.isArray(filter.symbol)) {
+            filter.symbol.forEach(sym => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'symbol';
+                input.value = sym;
+                form.appendChild(input);
+            });
+        }
+
+        form.file.value = filter.file || '';
+        form.chart.value = filter.chart || 'line';
+
+        alert("フィルターを読み込みました！");
+    }
+    </script>
+<script>
+function saveFilterAs() {
+    const name = document.getElementById('filterName').value.trim();
+    if (!name) {
+        alert("保存名を入力してください！");
+        return;
+    }
+
+    const form = document.getElementById('filterForm');
+    const filter = {
+        start: form.start.value,
+        end: form.end.value,
+        price_min: form.price_min.value,
+        price_max: form.price_max.value,
+        action: form.action.value,
+        symbol: Array.from(form.querySelectorAll('input[name="symbol"]')).map(e => e.value),
+        file: form.file.value,
+        chart: form.chart.value
+    };
+
+    localStorage.setItem(`savedFilter_${name}`, JSON.stringify(filter));
+    alert(`フィルター「${name}」を保存しました！`);
+
+    const datalist = document.getElementById('filterList');
+    if (![...datalist.options].some(opt => opt.value === name)) {
+        const option = document.createElement('option');
+        option.value = name;
+        datalist.appendChild(option);
+    }
+}
+</script>
+
+<script>
+function loadFilterByName() {
+    const name = document.getElementById('filterName').value.trim();
+    if (!name) {
+        alert("保存名を入力してください！");
+        return;
+    }
+
+    const filter = JSON.parse(localStorage.getItem(`savedFilter_${name}`));
+    if (!filter) {
+        alert(`「${name}」という保存名のフィルターが見つかりません。`);
+        return;
+    }
+
+    const form = document.getElementById('filterForm');
+    form.start.value = filter.start || '';
+    form.end.value = filter.end || '';
+    form.price_min.value = filter.price_min || '';
+    form.price_max.value = filter.price_max || '';
+    form.action.value = filter.action || '';
+
+    form.querySelectorAll('input[name="symbol"]').forEach(e => e.remove());
+    if (Array.isArray(filter.symbol)) {
+        filter.symbol.forEach(sym => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'symbol';
+            input.value = sym;
+            form.appendChild(input);
+        });
+    }
+
+    form.file.value = filter.file || '';
+    form.chart.value = filter.chart || 'line';
+
+    alert(`フィルター「${name}」を読み込みました！`);
+    localStorage.setItem('lastUsedFilter', name); // ✅ 正しい位置
+}
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const datalist = document.getElementById('filterList');
+
+    // datalistに保存済みフィルター名を追加
+    for (let key in localStorage) {
+        if (key.startsWith('savedFilter_')) {
+            const name = key.replace('savedFilter_', '');
+            if (![...datalist.options].some(opt => opt.value === name)) {
+                const option = document.createElement('option');
+                option.value = name;
+                datalist.appendChild(option);
+            }
+        }
+    }
+
+    // 前回使用したフィルターを自動読込
+    const lastUsed = localStorage.getItem('lastUsedFilter');
+    if (lastUsed) {
+        document.getElementById('filterName').value = lastUsed;
+        loadFilterByName(); // ✅ 引数なしでOK
+    }
+});
+</script>
+</body>
+</html>

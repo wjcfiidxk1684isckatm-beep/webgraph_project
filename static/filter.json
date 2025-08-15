@@ -1,0 +1,10 @@
+{
+  "symbol": [
+    "ETHUSDT"
+  ],
+  "start": "2025-08-01",
+  "end": "2025-08-10",
+  "price_min": "1000",
+  "price_max": "5000",
+  "action": "buy"
+}

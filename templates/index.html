@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>📁 ログファイル選択</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; background: #f0f0f0; }
+    h1 { color: #333; }
+    .section { background: #fff; padding: 20px; margin-bottom: 30px; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    label { display: block; margin-top: 10px; }
+    button { margin-top: 10px; padding: 8px 16px; }
+  </style>
+</head>
+<body>
+
+  <h1>📁 ログファイル選択</h1>
+
+  <div class="section">
+  <form action="/" method="post" enctype="multipart/form-data">
+    <label>CSVファイルをアップロードして表示:</label>
+    <input type="file" name="file">
+    <button type="submit">アップロードして表示</button>
+  </form>
+  </div>
+
+  <div class="section">
+    <h2>📂 保存済みファイル</h2>
+    {% if files %}
+      <ul>
+        {% for file in files %}
+          <li>
+            {{ file }}
+            <form action="/" method="post" style="display:inline;">
+              <input type="hidden" name="delete" value="{{ file }}">
+              <button type="submit">削除</button>
+            </form>
+            <form action="/graph" method="get" style="display:inline;">
+            <input type="hidden" name="file" value="{{ file }}">
+            <button type="submit">グラフ表示</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>ファイルがありません。</p>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <h2>📈 銘柄選択（最新ファイル）</h2>
+    {% if symbols %}
+      <form action="/graph" method="get">
+        <input type="hidden" name="file" value="{{ files[0] }}">
+        {% for symbol in symbols %}
+          <input type="checkbox" name="symbol" value="{{ symbol }}" checked> {{ symbol }}
+        {% endfor %}
+        <br><br>
+        <label>開始日:</label>
+        <input type="date" name="start">
+        <label>終了日:</label>
+        <input type="date" name="end">
+
+        <label>チャート種類:</label>
+        <select name="chart">
+          <option value="line">折れ線</option>
+          <option value="bar">棒グラフ</option>
+          <option value="scatter">散布図</option>
+        </select>
+        <!-- ⭐️ ここに追加！ -->
+        <div class="form-group mt-2">
+        <label><input type="checkbox" name="use_rsi" checked> RSIを使用</label><br>
+        <label><input type="checkbox" name="use_macd" checked> MACDを使用</label>
+        </div>
+        <!-- ✅ フィルター条件追加 -->
+        <label>価格下限:</label>
+        <input type="number" name="price_min" step="0.01">
+        <label>価格上限:</label>
+        <input type="number" name="price_max" step="0.01">
+        <label>アクション:</label>
+        <select name="action">
+          <option value="">すべて</option>
+          <option value="buy">買い</option>
+          <option value="sell">売り</option>
+        </select>
+
+        <br>
+        <button type="submit">📊 グラフ表示</button>
+      </form>
+    {% else %}
+      <p>銘柄情報がまだ読み込まれていません。</p>
+    {% endif %}
+  </div>
+
+</body>
+</html>
